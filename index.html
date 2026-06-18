@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖書館借閱分析與推薦系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6 font-sans">
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <div class="bg-indigo-700 p-6 rounded-xl shadow-lg text-white text-center">
+            <h1 class="text-3xl font-bold">📚 智慧圖書館系統</h1>
+            <p class="text-indigo-200 mt-2">包含：書籍列表、借閱操作、進階決策樹與資訊增益實作</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="bg-white p-6 rounded-xl shadow-md flex flex-col h-[750px]">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">📖 書籍列表</h2>
+                    <select id="genreFilter" onchange="filterBooks()" class="p-2 border rounded-lg bg-gray-50 focus:ring-2 outline-none">
+                        <option value="all">所有類型</option>
+                        <option value="小說">小說</option>
+                        <option value="科普">科普</option>
+                        <option value="商業">商業</option>
+                        <option value="歷史">歷史</option>
+                        <option value="漫畫">漫畫</option>
+                    </select>
+                </div>
+                <div class="overflow-y-auto flex-1 border rounded-lg">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 sticky top-0 shadow-sm">
+                            <tr>
+                                <th class="p-3 border-b font-semibold text-gray-600">書名</th>
+                                <th class="p-3 border-b font-semibold text-gray-600">作者</th>
+                                <th class="p-3 border-b font-semibold text-gray-600">類型</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookListBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="space-y-6 flex flex-col h-[750px]">
+                
+                <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-green-500">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">✍️ 借閱操作</h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-1">借閱者姓名 (請輸入或選擇)：</label>
+                            <div class="flex gap-2">
+                                <select id="borrowerSelect" onchange="document.getElementById('borrowerInput').value = this.value" class="p-2 border rounded-lg focus:ring-2 w-1/3 bg-gray-50">
+                                    <option value="魯夫">魯夫 (狂熱專精)</option>
+                                    <option value="炭治郎">炭治郎 (廣泛閱讀)</option>
+                                    <option value="大雄">大雄 (休閒小品)</option>
+                                    <option value="鳴人">鳴人 (潛力新手)</option>
+                                </select>
+                                <input type="text" id="borrowerInput" value="魯夫" class="w-2/3 p-2 border rounded-lg focus:ring-2" placeholder="例如: 魯夫">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-1">選擇想借的書：</label>
+                            <select id="bookSelect" class="w-full p-2 border rounded-lg focus:ring-2 bg-gray-50">
+                                </select>
+                        </div>
+                        <button onclick="submitBorrow()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition shadow-md">
+                            確認借閱
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-indigo-500 flex-1 overflow-y-auto flex flex-col">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">🎯 個人化推薦分析</h2>
+                    <div class="flex gap-2 mb-4">
+                        <select id="analysisSelect" onchange="document.getElementById('analysisUser').value = this.value" class="p-2 border rounded-lg focus:ring-2 w-1/3 bg-gray-50">
+                            <option value="魯夫">魯夫</option>
+                            <option value="炭治郎">炭治郎</option>
+                            <option value="大雄">大雄</option>
+                            <option value="鳴人">鳴人</option>
+                        </select>
+                        <input type="text" id="analysisUser" value="魯夫" class="flex-1 p-2 border rounded-lg focus:ring-2" placeholder="輸入姓名查詢">
+                        <button onclick="fetchAnalysis()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 rounded-lg transition shadow-md">分析</button>
+                    </div>
+                    
+                    <div id="resultArea" class="hidden space-y-4">
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-gray-100 p-3 rounded-lg shadow-inner text-sm">
+                                <h3 class="font-bold text-gray-700 mb-1 border-b pb-1">📊 實際萃取特徵</h3>
+                                <p class="text-gray-600 mt-1">總借閱次數：<span id="totalBorrows" class="font-bold text-black text-base"></span> 次</p>
+                                <p class="text-gray-600">不同書籍數：<span id="uniqueBooks" class="font-bold text-black text-base"></span> 本</p>
+                                <p class="text-gray-600">最愛類型：<span id="topGenre" class="font-bold text-indigo-600 text-base"></span></p>
+                                <p class="text-gray-600">單一佔比：<span id="genrePercent" class="font-bold text-black text-base"></span> %</p>
+                            </div>
+                            
+                            <div class="bg-indigo-50 p-3 rounded-lg text-center flex flex-col justify-center border border-indigo-200">
+                                <p class="text-gray-500 text-xs mb-1 font-bold">決策樹輸出結果</p>
+                                <span id="classification" class="text-2xl font-black text-indigo-700"></span>
+                            </div>
+                        </div>
+
+                        <div class="border border-yellow-300 bg-yellow-50 rounded-lg p-3 shadow-sm text-sm">
+                            <h3 class="font-bold text-yellow-800 flex items-center gap-1 mb-1">
+                                🌟 進階：資訊增益 (Information Gain)
+                            </h3>
+                            <p class="text-yellow-900 mb-1 text-xs">初始亂度 (Entropy) = 2.00 bits</p>
+                            <ul class="list-disc list-inside text-yellow-800 text-xs bg-yellow-100 p-2 rounded leading-relaxed">
+                                <li>總借閱次數 (門檻10) ➔ IG = <span class="font-bold">1.00</span> bit</li>
+                                <li>不同書籍數 (門檻8) ➔ IG = <span class="font-bold">1.00</span> bit</li>
+                                <li>單一類型佔比 (門檻60%) ➔ IG = <span class="font-bold">1.00</span> bit</li>
+                            </ul>
+                        </div>
+
+                        <h3 class="font-bold text-gray-800 mt-2 mb-1 border-b pb-1">✨ 專屬推薦書單</h3>
+                        <ul id="recommendList" class="space-y-2 overflow-y-auto flex-1">
+                            </ul>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allBooks = [];
+
+        // 1. 網頁載入時，立刻去抓取所有書籍
+        window.onload = function() {
+            fetch('http://localhost:3000/books')
+                .then(res => res.json())
+                .then(books => {
+                    allBooks = books;
+                    renderBooks(allBooks);
+                    populateBookSelect(allBooks);
+                })
+                .catch(err => console.error('無法取得書籍列表，請確認後端伺服器已啟動', err));
+        };
+
+        // 渲染左側書籍列表
+        function renderBooks(books) {
+            const tbody = document.getElementById('bookListBody');
+            tbody.innerHTML = books.map(b => `
+                <tr class="hover:bg-gray-200 transition duration-150">
+                    <td class="p-3 border-b font-bold text-gray-700">${b.title}</td>
+                    <td class="p-3 border-b text-gray-500 text-sm">${b.author}</td>
+                    <td class="p-3 border-b"><span class="px-2 py-1 bg-white border rounded-full text-xs font-semibold text-gray-600 shadow-sm">${b.genre}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        // 下拉選單：依類型篩選
+        function filterBooks() {
+            const genre = document.getElementById('genreFilter').value;
+            const filtered = (genre === 'all') ? allBooks : allBooks.filter(b => b.genre === genre);
+            renderBooks(filtered);
+        }
+
+        // 將書籍塞入借閱操作的下拉選單
+        function populateBookSelect(books) {
+            const select = document.getElementById('bookSelect');
+            select.innerHTML = books.map(b => `<option value="${b.id}">${b.title} (${b.genre})</option>`).join('');
+        }
+
+        // 執行借閱操作 (呼叫 POST API)
+        function submitBorrow() {
+            const book_id = document.getElementById('bookSelect').value;
+            const borrower_name = document.getElementById('borrowerInput').value;
+            
+            if (!borrower_name) {
+                alert('請輸入借閱者姓名！');
+                return;
+            }
+
+            fetch('http://localhost:3000/borrow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ book_id, borrower_name })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) alert('錯誤: ' + data.error);
+                else alert('✅ 借閱成功！此紀錄已寫入資料庫。\n您可以重新點擊右側的【分析】按鈕，看看他的特徵有沒有變化。');
+            })
+            .catch(err => alert('連線失敗，請確認後台伺服器 (node server.js) 已開啟！'));
+        }
+
+        // 執行決策樹分析
+        function fetchAnalysis() {
+            const userName = document.getElementById('analysisUser').value;
+            if (!userName) {
+                alert('請輸入要分析的姓名！');
+                return;
+            }
+
+            fetch(`http://localhost:3000/borrowers/${userName}/analysis`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.message) return alert(data.message);
+                    if (data.error) return alert('發生錯誤: ' + data.error);
+                    
+                    document.getElementById('totalBorrows').innerText = data.features.totalBorrows;
+                    document.getElementById('uniqueBooks').innerText = data.features.uniqueBooksCount || 'N/A';
+                    document.getElementById('topGenre').innerText = data.features.topGenre;
+                    document.getElementById('genrePercent').innerText = data.features.singleGenrePercentage;
+                    document.getElementById('classification').innerText = data.classification;
+
+                    const list = document.getElementById('recommendList');
+                    list.innerHTML = data.recommendations.map(b => `
+                        <li class="flex justify-between items-center p-3 bg-gray-50 border rounded-lg hover:bg-white hover:shadow-md transition">
+                            <span class="font-bold text-gray-700 text-sm">《${b.title}》 <span class="text-xs font-normal text-gray-500 ml-1">作者：${b.author}</span></span>
+                            <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full font-bold">${b.genre}</span>
+                        </li>
+                    `).join('');
+                    
+                    document.getElementById('resultArea').classList.remove('hidden');
+                })
+                .catch(err => alert('連線失敗，請確認後台伺服器 (node server.js) 已開啟！'));
+        }
+    </script>
+</body>
+</html>
